@@ -12,8 +12,8 @@ a file, if instructed. |#
           (λ (exn)
             (when (show-file-error-messages)
               (case (car (exn:fail:filesystem:errno-errno exn))
-                [(2) (printf "grep: ~a: ~a\n" path "No such file or directory")]
-                [(13) (printf "grep: ~a: ~a\n" path "Permission denied")])))])
+                [(2) (print-error-message "~a: ~a\n" path "No such file or directory")]
+                [(13) (print-error-message "~a: ~a\n" path "Permission denied")])))])
       (call-with-input-file
           path
         (λ (port) (grep-port patterns port path))))
@@ -28,6 +28,10 @@ from the port which match at least one of the patterns |#
                 #:when (regexp-match? pattern line))
       (printf "~a:~a\n" path line)))
   )
+
+(define (print-error-message form . v)
+  (eprintf "grep: ~a"
+           (apply format form v)))
 
 (module+ main
   (define patterns null)

@@ -1,5 +1,26 @@
 #lang racket
 
+(define show-file-error-messages (make-parameter #true))
+
+#| - Given a list of patterns and filepaths, prints lines from each file which
+match at least one of the patterns. Prints error messages when it cannot access
+a file, if instructed. |#
+(define (grep patterns paths)
+  (for ([path paths])
+    (with-handlers
+        ([exn:fail:filesystem:errno?
+          (λ (exn)
+            (when (show-file-error-messages)
+              (case (car (exn:fail:filesystem:errno-errno exn))
+                [(2) (printf "~a:~a\n" path "No such file or directory")]
+                [(13) (printf "~a:~a\n" path "Permission denied")])))])
+      (call-with-input-file
+          path
+        (λ (port) (grep-port patterns port path))))
+    ))
+
+#| - What does it do: Given a list of patterns and a port to scan, prints lines
+from the port which match at least one of the patterns |#
 (define (grep-port patterns port path)
   in-lines
   (for ([line (in-lines port)])
@@ -8,16 +29,53 @@
       (printf "~a:~a\n" path line)))
   )
 
-
-#| - Take list of patterns and files from command-line |#
-#| - For each file |#
-#|   - Try to open a port to the file |#
-#|   - If I can't, print an error message, unless the user said not to |#
-#|   - grep-port |#
+(module+ main
+  (define patterns null)
+  (command-line
+   #:program "grep"
+   #:multi
+   (("-e" "--pattern")
+    pattern
+    "Use patterns for matching"
+    (set! patterns (cons pattern patterns)))
+   (("-s" "--no-messages")
+    "suppress error messages"
+    (show-file-error-messages #false))
+   #:args paths
+   (grep patterns paths))
+  )
 
 (module+ test
-  (require rackunit)
+  (require rackunit))
 
+; learning tests
+(module+ test
+  (check-exn
+   exn?
+   (thunk (open-input-file "unopenable-file.txt")))
+
+  (check-exn
+   exn:fail?
+   (thunk (open-input-file "unopenable-file.txt")))
+
+  (check-exn
+   exn:fail:filesystem?
+   (thunk (open-input-file "unopenable-file.txt")))
+
+  (check-exn
+   exn:fail:filesystem:errno?
+   (thunk (open-input-file "file-doesnt-exist")))
+
+  (check-equal?
+   (with-handlers ([exn:fail:filesystem:errno?
+                    (λ (exn) (car (exn:fail:filesystem:errno-errno exn)))])
+     (open-input-file "file-doesnt-exist")
+     )
+   2
+   )
+  )
+
+(module+ test
   (define test-strings
     `#hash(
       ["file-one.txt" . "one"]
@@ -113,5 +171,4 @@
    "prints each matching line more than once"
    )
   )
-
 

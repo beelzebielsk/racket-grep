@@ -12,8 +12,8 @@ a file, if instructed. |#
           (λ (exn)
             (when (show-file-error-messages)
               (case (car (exn:fail:filesystem:errno-errno exn))
-                [(2) (printf "~a:~a\n" path "No such file or directory")]
-                [(13) (printf "~a:~a\n" path "Permission denied")])))])
+                [(2) (printf "grep: ~a: ~a\n" path "No such file or directory")]
+                [(13) (printf "grep: ~a: ~a\n" path "Permission denied")])))])
       (call-with-input-file
           path
         (λ (port) (grep-port patterns port path))))

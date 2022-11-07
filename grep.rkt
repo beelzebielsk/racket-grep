@@ -23,7 +23,6 @@ a file, if instructed. |#
 #| - What does it do: Given a list of patterns and a port to scan, prints lines
 from the port which match at least one of the patterns |#
 (define (grep-port patterns port path)
-  in-lines
   (for ([line (in-lines port)])
     (for/first ([pattern patterns]
                 #:when (regexp-match? pattern line))

@@ -1,7 +1,15 @@
 #lang racket
 
+(require mock)
+
 (define show-file-error-messages (make-parameter #true))
 
+; TODO: -f FILE, --file=FILE
+; TODO: -i, --ignore-case
+; TODO: --no-ignore-case
+; TODO: -v, --invert-match
+; TODO: -w, --word-regexp
+; TODO: -x, --line-regexp
 (define (main)
   (define patterns null)
   (command-line
@@ -20,7 +28,9 @@
 #| - Given a list of patterns and filepaths, prints lines from each file which
 match at least one of the patterns. Prints error messages when it cannot access
 a file, if instructed. |#
-(define (grep patterns paths)
+; TODO: mock print-error-message and grep-port
+(define/mock (grep patterns paths)
+  #:mock call-with-input-file #:as call-with-input-file-mock
   (for ([path paths])
     (with-handlers
         ([exn:fail:filesystem:errno?
@@ -57,7 +67,8 @@ from the port which match at least one of the patterns |#
   (main))
 
 (module+ test
-  (require rackunit))
+  (require rackunit
+           racket/generator))
 
 ; learning tests
 (module+ test
@@ -84,6 +95,17 @@ from the port which match at least one of the patterns |#
      )
    2
    )
+
+  (define (mock-call-with-input-file . vals)
+    (define vals-generator (sequence->generator vals))
+    (λ (path proc)
+      (define val (vals-generator))
+      (cond
+        [(string? val) (call-with-input-string val proc)]
+        [(exn? val) (raise val)])))
+
+  (define (mock-exn:fail:filesystem:errno errno)
+    (exn:fail:filesystem:errno "" (current-continuation-marks) errno))
   )
 
 (module+ test
@@ -181,5 +203,7 @@ from the port which match at least one of the patterns |#
     "")
    "prints each matching line more than once"
    )
+
+  ; TODO: Test grep
   )
 

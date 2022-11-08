@@ -2,6 +2,21 @@
 
 (define show-file-error-messages (make-parameter #true))
 
+(define (main)
+  (define patterns null)
+  (command-line
+   #:program "grep"
+   #:multi
+   (("-e" "--pattern")
+    pattern
+    "Use patterns for matching"
+    (set! patterns (cons pattern patterns)))
+   (("-s" "--no-messages")
+    "suppress error messages"
+    (show-file-error-messages #false))
+   #:args paths
+   (grep patterns paths)))
+
 #| - Given a list of patterns and filepaths, prints lines from each file which
 match at least one of the patterns. Prints error messages when it cannot access
 a file, if instructed. |#
@@ -39,20 +54,7 @@ from the port which match at least one of the patterns |#
            (apply format form v)))
 
 (module+ main
-  (define patterns null)
-  (command-line
-   #:program "grep"
-   #:multi
-   (("-e" "--pattern")
-    pattern
-    "Use patterns for matching"
-    (set! patterns (cons pattern patterns)))
-   (("-s" "--no-messages")
-    "suppress error messages"
-    (show-file-error-messages #false))
-   #:args paths
-   (grep patterns paths))
-  )
+  (main))
 
 (module+ test
   (require rackunit))

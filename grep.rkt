@@ -5,10 +5,9 @@
          racket/port)
 
 (define show-file-error-messages (make-parameter #true))
+(define ignore-case-in-search (make-parameter #false))
 
 ; TODO: -f FILE, --file=FILE
-; TODO: -i, --ignore-case
-; TODO: --no-ignore-case
 ; TODO: -v, --invert-match
 ; TODO: -w, --word-regexp
 ; TODO: -x, --line-regexp
@@ -25,8 +24,19 @@
    (("-s" "--no-messages")
     "suppress error messages"
     (show-file-error-messages #false))
+   (("-i" "--ignore-case")
+    "ignore case distinctions in patterns and data"
+    (ignore-case-in-search #true))
+   (("--no-ignore-case")
+    "do not ignore case distinctions (default)"
+    (ignore-case-in-search #false))
    #:args paths
+   (when (ignore-case-in-search)
+     (set! patterns (map add-case-insensitive-mode patterns)))
    (grep patterns paths)))
+
+(define (add-case-insensitive-mode pattern)
+  (format "(?i:~a)" pattern))
 
 #| - Given a list of patterns and filepaths, prints lines from each file which
 match at least one of the patterns. Prints error messages when it cannot access

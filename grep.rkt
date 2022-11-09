@@ -12,6 +12,7 @@
 ; TODO: -v, --invert-match
 ; TODO: -w, --word-regexp
 ; TODO: -x, --line-regexp
+; TODO: Write usage patterns like in manual, whatever you can currently use eg `grep [options ...] PATTERNS ... FILES ...
 (define (main)
   (define patterns null)
   (command-line
@@ -30,9 +31,10 @@
 #| - Given a list of patterns and filepaths, prints lines from each file which
 match at least one of the patterns. Prints error messages when it cannot access
 a file, if instructed. |#
-; TODO: mock print-error-message and grep-port
 (define/mock (grep patterns paths)
-  #:mock call-with-input-file #:as call-with-input-file-mock
+  #:mock call-with-input-file #:as cwif-mock
+  #:mock print-error-message #:as pem-mock #:with-behavior void
+  #:mock grep-port #:as gp-mock #:with-behavior void
   (for ([path paths])
     (with-handlers
         ([exn:fail:filesystem:errno?
@@ -70,6 +72,7 @@ from the port which match at least one of the patterns |#
 
 (module+ test
   (require rackunit
+           mock/rackunit
            racket/function
            racket/string
            racket/generator))
@@ -110,6 +113,15 @@ from the port which match at least one of the patterns |#
 
   (define (mock-exn:fail:filesystem:errno errno)
     (exn:fail:filesystem:errno "" (current-continuation-marks) errno))
+
+  (with-mocks grep
+    (with-mock-behavior ([cwif-mock
+                          (mock-call-with-input-file
+                           "hi"
+                           (mock-exn:fail:filesystem:errno '(2 . posix))
+                           (mock-exn:fail:filesystem:errno '(13 . posix)))])
+      (grep (list "hic" "hi") (list "path-one.txt"))
+      ))
   )
 
 (module+ test
@@ -208,6 +220,29 @@ from the port which match at least one of the patterns |#
    "prints each matching line more than once"
    )
 
-  ; TODO: Test grep
+  (with-mocks grep
+    (with-mock-behavior
+        ([cwif-mock
+          (mock-call-with-input-file
+           (mock-exn:fail:filesystem:errno '(2 . posix))
+           (mock-exn:fail:filesystem:errno '(13 . posix))
+           (mock-exn:fail:filesystem:errno '(2 . posix))
+           (mock-exn:fail:filesystem:errno '(13 . posix)))])
+      (grep (list "") (list "file-dne.txt"))
+      (check-mock-num-calls pem-mock 1)
+      (grep (list "") (list "file-dne.txt"))
+      (check-mock-num-calls pem-mock 2)
+      (parameterize ([show-file-error-messages #false])
+        (grep (list "") (list "file-dne.txt"))
+        (check-mock-num-calls pem-mock 2)
+        (grep (list "") (list "file-dne.txt"))
+        (check-mock-num-calls pem-mock 2))
+      ))
+
+  (with-mocks grep
+    (with-mock-behavior
+        ([cwif-mock (mock-call-with-input-file "")])
+      (grep (list "") (list "file.txt"))
+      (check-mock-num-calls gp-mock 1)))
   )
 

@@ -1,6 +1,8 @@
-#lang racket
+#lang racket/base
 
-(require mock)
+(require mock
+         racket/cmdline
+         racket/port)
 
 (define show-file-error-messages (make-parameter #true))
 
@@ -68,6 +70,8 @@ from the port which match at least one of the patterns |#
 
 (module+ test
   (require rackunit
+           racket/function
+           racket/string
            racket/generator))
 
 ; learning tests

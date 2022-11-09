@@ -58,8 +58,8 @@ from the port which match at least one of the patterns |#
 
 (define (errno-to-message errno)
   (case errno
-    [(2) ("No such file or directory")]
-    [(13) ("Permission denied")]))
+    [(2) "No such file or directory"]
+    [(13) "Permission denied"]))
 
 (define (print-error-message form . v)
   (eprintf "grep: ~a"

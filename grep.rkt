@@ -2,15 +2,17 @@
 
 (require mock
          racket/cmdline
+         racket/bool
          racket/port)
 
 (define show-file-error-messages (make-parameter #true))
 (define ignore-case-in-search (make-parameter #false))
+(define invert-matches (make-parameter #false))
 
-; TODO: -v, --invert-match
 ; TODO: -w, --word-regexp
 ; TODO: -x, --line-regexp
 ; TODO: Write usage patterns like in manual, whatever you can currently use eg `grep [options ...] PATTERNS ... FILES ...
+; TODO: How do I test out main?
 (define (main)
   (define patterns null)
   (command-line
@@ -53,6 +55,9 @@
    (("--no-ignore-case")
     "do not ignore case distinctions (default)"
     (ignore-case-in-search #false))
+   (("-v" "--invert-match")
+    "select non-matching lines"
+    (invert-matches #true))
    #:args paths
    (when (ignore-case-in-search)
      (set! patterns (map add-case-insensitive-mode patterns)))
@@ -90,9 +95,9 @@ from the port which match at least one of the patterns |#
 (define (grep-port patterns port path)
   (for ([line (in-lines port)])
     (for/first ([pattern patterns]
-                #:when (regexp-match? pattern line))
-      (printf "~a:~a\n" path line)))
-  )
+                #:when (xor (regexp-match? pattern line) (invert-matches)))
+      ; TODO: Extract this into a function and use it in test-grep-port
+      (printf "~a:~a\n" path line))))
 
 (define (errno-to-message errno)
   (case errno
@@ -256,6 +261,21 @@ from the port which match at least one of the patterns |#
    "prints each matching line more than once"
    )
 
+  (parameterize ([invert-matches #true])
+    (test-grep-port
+     "file-one.txt"
+     (list "one")
+     ""
+     "invert match doesn't work"
+     )
+
+    (test-grep-port
+     "file-four.txt"
+     (list "three")
+     "file-four.txt:one four\n"
+     "invert match doesn't work")
+    )
+
   (with-mocks grep
     (with-mock-behavior
         ([cwif-mock
@@ -280,5 +300,8 @@ from the port which match at least one of the patterns |#
         ([cwif-mock (mock-call-with-input-file "")])
       (grep (list "") (list "file.txt"))
       (check-mock-num-calls gp-mock 1)))
+
+  ; TODO: test main
+  ; TODO: test that patterns are read correctly
   )
 

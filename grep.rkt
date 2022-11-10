@@ -97,7 +97,10 @@ from the port which match at least one of the patterns |#
     (for/first ([pattern patterns]
                 #:when (xor (regexp-match? pattern line) (invert-matches)))
       ; TODO: Extract this into a function and use it in test-grep-port
-      (printf "~a:~a\n" path line))))
+      (displayln (format-match path line)))))
+
+(define (format-match path line)
+  (format "~a:~a" path line))
 
 (define (errno-to-message errno)
   (case errno
@@ -196,7 +199,10 @@ from the port which match at least one of the patterns |#
            "\n")]
       ))
 
-  (define (test-grep-port test-file-path patterns expected-output [failure-message ""])
+  (define (test-grep-port
+           test-file-path patterns
+           #:failure-message [failure-message ""]
+           . expected-output-lines)
     (call-with-input-string
      (hash-ref test-strings test-file-path)
      (λ (port)
@@ -204,76 +210,67 @@ from the port which match at least one of the patterns |#
         (with-output-to-string
           (λ ()
             (grep-port patterns port test-file-path)))
-        expected-output
+        (if (null? expected-output-lines)
+            ""
+            (string-join
+             (map (curry format-match test-file-path) expected-output-lines)
+             "\n"
+             #:after-last "\n"))
         failure-message
         ))))
 
   (test-grep-port
    "file-one.txt"
    (list #px"one")
-   (format "~a:~a\n" "file-one.txt" "one")
-   "failed to find match in a single word file")
+   "one"
+   #:failure-message "failed to find match in a single word file")
 
   (test-grep-port
    "path/to/file-two.txt"
    (list #px"one")
-   (format "~a:~a\n" "path/to/file-two.txt" "one and more things")
-   "failed to find match in a file with one line")
+   "one and more things"
+   #:failure-message "failed to find match in a file with one line")
 
   (test-grep-port
    "/absolute/path/to/file-three.txt"
    (list #px"one")
-   (format "~a:~a\n" "/absolute/path/to/file-three.txt" "one")
-   "failed to find match in a file with several lines")
+   "one"
+   #:failure-message "failed to find match in a file with several lines")
 
   (test-grep-port
    "/absolute/path/to/file-three.txt"
    (list #px"two")
-   (format "~a:~a\n" "/absolute/path/to/file-three.txt" "two")
-   "failed to find match in a file with several lines")
+   "two"
+   #:failure-message "failed to find match in a file with several lines")
 
   (test-grep-port
    "file-four.txt"
    (list #px"one")
-   (string-join
-    (map
-     (λ (line)
-       (format "~a:~a\n" "file-four.txt" line))
-     '("one two three four"
-       "one three four"
-       "one four"
-       ))
-    "")
-   "failed to match multiple lines"
-   )
+   "one two three four"
+   "one three four"
+   "one four"
+   #:failure-message "failed to match multiple lines")
 
   (test-grep-port
    "file-five.txt"
    (list #px"one" #px"two")
-   (string-join
-    (map
-     (λ (line)
-       (format "~a:~a\n" "file-five.txt" line))
-     '("one two"
-       "two three")
-     )
-    "")
-   "prints each matching line more than once"
+   "one two"
+   "two three"
+   #:failure-message "prints each matching line more than once"
    )
 
   (parameterize ([invert-matches #true])
     (test-grep-port
      "file-one.txt"
      (list "one")
-     ""
-     "invert match doesn't work"
+     #:failure-message "invert match doesn't work"
      )
 
     (test-grep-port
      "file-four.txt"
      (list "three")
-     "file-four.txt:one four\n"
-     "invert match doesn't work")
+     "one four"
+     #:failure-message "invert match doesn't work")
     )
 
   (with-mocks grep

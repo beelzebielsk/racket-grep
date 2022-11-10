@@ -13,7 +13,9 @@
 ; TODO: -x, --line-regexp
 ; TODO: Write usage patterns like in manual, whatever you can currently use eg `grep [options ...] PATTERNS ... FILES ...
 ; TODO: How do I test out main?
-(define (main)
+(define/mock (main)
+  #:mock grep #:as g-mock #:with-behavior void
+  #:mock call-with-input-file #:as cwif-mock
   (define patterns null)
   (command-line
    #:program "grep"
@@ -117,8 +119,12 @@ from the port which match at least one of the patterns |#
 (module+ test
   (require rackunit
            mock/rackunit
+           syntax/parse/define
+           (for-syntax racket/base) ; for ~?
            racket/function
            racket/string
+           racket/match
+           racket/list
            racket/generator))
 
 ; learning tests
@@ -166,6 +172,22 @@ from the port which match at least one of the patterns |#
                            (mock-exn:fail:filesystem:errno '(13 . posix)))])
       (grep (list "hic" "hi") (list "path-one.txt"))
       ))
+
+  ; how to check the arguments of a mock call, and use match on them
+  (with-mocks main
+    (parameterize ([current-command-line-arguments
+                    '#("-f" "patterns" "file")])
+      (with-mock-behavior ([cwif-mock
+                            (mock-call-with-input-file
+                             "one\ntwo\nthree")])
+        (main)
+        (check-mock-called-with? g-mock (arguments '("one" "two" "three") '("file")))
+        (check-true
+         (match (arguments-positional (mock-call-args (last (mock-calls g-mock))))
+           #| [(struct arguments ((list "one" "two" "three") (list "file"))) #true] |#
+           [(list (list-no-order "one" "three" "two") (list-no-order "file")) #true]
+           [_ #false])
+         ))))
   )
 
 (module+ test
@@ -298,7 +320,35 @@ from the port which match at least one of the patterns |#
       (grep (list "") (list "file.txt"))
       (check-mock-num-calls gp-mock 1)))
 
+  ; TODO: Improve failure error reporting. It should look more like `check-mock-called-with?`
+  ; TODO: Check all of the calls, similar to check-mock-called-with?
+  (define-syntax-parse-rule
+    (check-mock-called-with-match? mock-name:id
+                                   ((~literal arguments) clauses ...)
+                                   (~optional message:expr))
+    (check-true
+     (match (arguments-positional (mock-call-args (last (mock-calls mock-name))))
+       [(list clauses ... ) #true]
+       [_ #false])
+     (~? message)))
+
   ; TODO: test main
   ; TODO: test that patterns are read correctly
+  (with-mocks main
+    (parameterize ([current-command-line-arguments
+                    '#("-e" "one" "-e" "two" "file")])
+      (main)
+      (check-mock-called-with-match?
+       g-mock (arguments (list-no-order "one" "two") '("file"))))
+
+    (parameterize ([current-command-line-arguments
+                    '#("-f" "patterns" "file")])
+      (with-mock-behavior ([cwif-mock
+                            (mock-call-with-input-file
+                             "one\ntwo\nthree")])
+        (main)
+        (check-mock-called-with-match?
+         g-mock (arguments (list-no-order "one" "two" "three") (list-no-order "file")))
+        )))
   )
 

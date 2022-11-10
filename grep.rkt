@@ -7,7 +7,6 @@
 (define show-file-error-messages (make-parameter #true))
 (define ignore-case-in-search (make-parameter #false))
 
-; TODO: -f FILE, --file=FILE
 ; TODO: -v, --invert-match
 ; TODO: -w, --word-regexp
 ; TODO: -x, --line-regexp
@@ -21,6 +20,30 @@
     pattern
     "Use patterns for matching"
     (set! patterns (cons pattern patterns)))
+   (("-f" "--file")
+    path
+    "take PATTERNS from FILE"
+    (cond
+      [(directory-exists? path)
+       (print-error-message
+        "~a: ~a\n"
+        path
+        "Is a directory. Argument to --file must be a file.")
+       (exit)]
+      [else
+       (with-handlers
+           ([exn:fail:filesystem:errno?
+             (λ (exn)
+               (when (show-file-error-messages)
+                 (print-error-message
+                  "~a: ~a\n"
+                  path
+                  (errno-to-message (car (exn:fail:filesystem:errno-errno exn))))
+                 (exit)))])
+         (call-with-input-file
+             path
+           (λ (port) (set! patterns (append patterns (port->lines port))))))
+       ]))
    (("-s" "--no-messages")
     "suppress error messages"
     (show-file-error-messages #false))
@@ -46,6 +69,9 @@ a file, if instructed. |#
   #:mock print-error-message #:as pem-mock #:with-behavior void
   #:mock grep-port #:as gp-mock #:with-behavior void
   (for ([path paths])
+    ; TODO: Handle path pointing to a directory. When not recursive, print
+    ; error message and continue. When recursive, recurse on files in
+    ; directory.
     (with-handlers
         ([exn:fail:filesystem:errno?
           (λ (exn)

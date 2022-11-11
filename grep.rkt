@@ -192,31 +192,31 @@ from the port which match at least one of the patterns |#
 
   (test-grep-port
    "file-one.txt"
-   (list #px"one")
+   (list "one")
    "one"
    #:failure-message "failed to find match in a single word file")
 
   (test-grep-port
    "path/to/file-two.txt"
-   (list #px"one")
+   (list "one")
    "one and more things"
    #:failure-message "failed to find match in a file with one line")
 
   (test-grep-port
    "/absolute/path/to/file-three.txt"
-   (list #px"one")
+   (list "one")
    "one"
    #:failure-message "failed to find match in a file with several lines")
 
   (test-grep-port
    "/absolute/path/to/file-three.txt"
-   (list #px"two")
+   (list "two")
    "two"
    #:failure-message "failed to find match in a file with several lines")
 
   (test-grep-port
    "file-four.txt"
-   (list #px"one")
+   (list "one")
    "one two three four"
    "one three four"
    "one four"
@@ -224,7 +224,7 @@ from the port which match at least one of the patterns |#
 
   (test-grep-port
    "file-five.txt"
-   (list #px"one" #px"two")
+   (list "one" "two")
    "one two"
    "two three"
    #:failure-message "prints each matching line more than once"
@@ -357,4 +357,5 @@ from the port which match at least one of the patterns |#
            [_ #false])
          ))))
   )
+
 

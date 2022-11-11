@@ -76,10 +76,9 @@ a file, if instructed. |#
   #:mock grep-port #:as gp-mock #:with-behavior void
   #:mock directory-exists? #:as de-mock #:with-behavior (const #false)
   (for ([path paths]
-        #:unless
-        (let ([result (directory-exists? path)])
-          (when result (print-error-message "~a: ~a\n" path "Is a directory"))
-          result))
+        #:do [(define dir-exists? (directory-exists? path))
+              (when dir-exists? (print-error-message "~a: ~a\n" path "Is a directory"))]
+        #:unless dir-exists?)
     (with-handlers
         ([exn:fail:filesystem:errno?
           (λ (exn)

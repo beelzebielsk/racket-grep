@@ -3,6 +3,7 @@
 (require mock
          racket/cmdline
          racket/bool
+         racket/function
          racket/port)
 
 (define show-file-error-messages (make-parameter #true))
@@ -75,10 +76,12 @@ a file, if instructed. |#
   #:mock call-with-input-file #:as cwif-mock
   #:mock print-error-message #:as pem-mock #:with-behavior void
   #:mock grep-port #:as gp-mock #:with-behavior void
-  (for ([path paths])
-    ; TODO(v2): Handle path pointing to a directory. When not recursive, print
-    ; error message and continue. When recursive, recurse on files in
-    ; directory.
+  #:mock directory-exists? #:as de-mock #:with-behavior (const #false)
+  (for ([path paths]
+        #:unless
+        (let ([result (directory-exists? path)])
+          (when result (print-error-message "~a: ~a\n" path "Is a directory"))
+          result))
     (with-handlers
         ([exn:fail:filesystem:errno?
           (λ (exn)
@@ -350,5 +353,12 @@ from the port which match at least one of the patterns |#
         (check-mock-called-with-match?
          g-mock (arguments (list-no-order "one" "two" "three") (list-no-order "file")))
         )))
+
+  ; testing when called with paths that are directories
+  ; case one: called with one path which is a directory
+  (with-mocks grep
+    (with-mock-behavior ([de-mock (const #true)])
+      (grep (list "") (list "."))
+      (check-mock-num-calls pem-mock 1)))
   )
 

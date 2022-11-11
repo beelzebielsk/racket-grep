@@ -158,6 +158,18 @@ from the port which match at least one of the patterns |#
            "\n")]
       ))
 
+  (define (mock-call-with-input-file . vals)
+    (define vals-generator (sequence->generator vals))
+    (λ (path proc)
+      (define val (vals-generator))
+      (cond
+        [(string? val) (call-with-input-string val proc)]
+        [(exn? val) (raise val)])))
+
+  (define (mock-exn:fail:filesystem:errno errno)
+    (exn:fail:filesystem:errno "" (current-continuation-marks) errno))
+
+
   (define (test-grep-port
            test-file-path patterns
            #:failure-message [failure-message ""]
@@ -321,17 +333,6 @@ from the port which match at least one of the patterns |#
      )
    2
    )
-
-  (define (mock-call-with-input-file . vals)
-    (define vals-generator (sequence->generator vals))
-    (λ (path proc)
-      (define val (vals-generator))
-      (cond
-        [(string? val) (call-with-input-string val proc)]
-        [(exn? val) (raise val)])))
-
-  (define (mock-exn:fail:filesystem:errno errno)
-    (exn:fail:filesystem:errno "" (current-continuation-marks) errno))
 
   (with-mocks grep
     (with-mock-behavior ([cwif-mock

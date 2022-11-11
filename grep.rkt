@@ -269,17 +269,20 @@ from the port which match at least one of the patterns |#
       (grep (list "") (list "file.txt"))
       (check-mock-num-calls gp-mock 1)))
 
-  ; TODO: Improve failure error reporting. It should look more like `check-mock-called-with?`
   ; TODO: Check all of the calls, similar to check-mock-called-with?
   (define-syntax-parse-rule
     (check-mock-called-with-match? mock-name:id
                                    ((~literal arguments) clauses ...)
                                    (~optional message:expr))
-    (check-true
-     (match (arguments-positional (mock-call-args (last (mock-calls mock-name))))
-       [(list clauses ... ) #true]
-       [_ #false])
-     (~? message)))
+    (begin
+      (define call-args (mock-call-args (last (mock-calls mock-name))))
+      (with-check-info (['actual call-args]
+                        ['expected (quote (arguments clauses ...))])
+        (check-true
+         (match (arguments-positional call-args)
+           [(list clauses ... ) #true]
+           [_ #false])
+         (~? message)))))
 
   (with-mocks main
     (parameterize ([current-command-line-arguments
@@ -295,7 +298,7 @@ from the port which match at least one of the patterns |#
                              "one\ntwo\nthree")])
         (main)
         (check-mock-called-with-match?
-         g-mock (arguments (list-no-order "one" "two" "three") (list-no-order "file")))
+         g-mock (arguments (list-no-order "one" "two" "three" "four") (list-no-order "file")))
         )))
 
   ; testing when called with paths that are directories
@@ -357,5 +360,4 @@ from the port which match at least one of the patterns |#
            [_ #false])
          ))))
   )
-
 

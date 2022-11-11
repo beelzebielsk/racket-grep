@@ -11,8 +11,8 @@
 
 ; TODO: -w, --word-regexp
 ; TODO: -x, --line-regexp
-; TODO: Write usage patterns like in manual, whatever you can currently use eg `grep [options ...] PATTERNS ... FILES ...
-; TODO: How do I test out main?
+; TODO(v2): Write usage patterns like in manual, whatever you can currently use eg `grep [options ...] PATTERNS ... FILES ...
+; TODO(v2): How do I test out main?
 (define/mock (main)
   #:mock grep #:as g-mock #:with-behavior void
   #:mock call-with-input-file #:as cwif-mock
@@ -76,7 +76,7 @@ a file, if instructed. |#
   #:mock print-error-message #:as pem-mock #:with-behavior void
   #:mock grep-port #:as gp-mock #:with-behavior void
   (for ([path paths])
-    ; TODO: Handle path pointing to a directory. When not recursive, print
+    ; TODO(v2): Handle path pointing to a directory. When not recursive, print
     ; error message and continue. When recursive, recurse on files in
     ; directory.
     (with-handlers

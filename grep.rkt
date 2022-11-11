@@ -12,8 +12,6 @@
 
 ; TODO: -w, --word-regexp
 ; TODO: -x, --line-regexp
-; TODO(v2): Write usage patterns like in manual, whatever you can currently use eg `grep [options ...] PATTERNS ... FILES ...
-; TODO(v2): How do I test out main?
 (define/mock (main)
   #:mock grep #:as g-mock #:with-behavior void
   #:mock call-with-input-file #:as cwif-mock
@@ -101,7 +99,6 @@ from the port which match at least one of the patterns |#
   (for ([line (in-lines port)])
     (for/first ([pattern patterns]
                 #:when (xor (regexp-match? pattern line) (invert-matches)))
-      ; TODO: Extract this into a function and use it in test-grep-port
       (displayln (format-match path line)))))
 
 (define (format-match path line)

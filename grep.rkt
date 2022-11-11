@@ -124,38 +124,44 @@ from the port which match at least one of the patterns |#
            racket/string
            racket/match
            racket/list
-           racket/generator))
+           racket/generator)
 
-(module+ test
+  (define-syntax-parse-rule (lines the-lines ...)
+    (__lines (quasiquote (the-lines ...))))
+
+  (define (__lines lines)
+    (string-join lines "\n"))
+
+  (define (repeat str times)
+    (build-string times (const str)))
+
   (define test-strings
     `#hash(
       ["file-one.txt" . "one"]
       ["path/to/file-two.txt"
        . "one and more things"]
       ["/absolute/path/to/file-three.txt"
-       . ,(string-join
-           '("one"
-             "two"
-             "three"
-             )
-           "\n")
+       . ,(lines "one"
+                 "two"
+                 "three")
        ]
       ["file-four.txt"
-       . ,(string-join
-           '("one two three four"
-             "one three four"
-             "one four"
-             )
-           "\n")
+       . ,(lines "one two three four"
+                 "one three four"
+                 "one four")
        ]
       ["file-five.txt"
-       . ,(string-join
-           '("one two"
-             "two three"
-             "three four"
-             )
-           "\n")]
-      ))
+       . ,(lines "one two"
+                 "two three"
+                 "three four")]
+      ["file-six.txt"
+       . ,(lines "one"
+                 "needle"
+                 "two"
+                 ,@(repeat "" 6)
+                 "three"
+                 "needle"
+                 "four")]))
 
   (define (mock-call-with-input-file . vals)
     (define vals-generator (sequence->generator vals))
@@ -226,8 +232,7 @@ from the port which match at least one of the patterns |#
    (list "one" "two")
    "one two"
    "two three"
-   #:failure-message "prints each matching line more than once"
-   )
+   #:failure-message "prints each matching line more than once")
 
   (parameterize ([invert-matches #true])
     (test-grep-port

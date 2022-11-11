@@ -297,7 +297,7 @@ from the port which match at least one of the patterns |#
                              "one\ntwo\nthree")])
         (main)
         (check-mock-called-with-match?
-         g-mock (arguments (list-no-order "one" "two" "three" "four") (list-no-order "file")))
+         g-mock (arguments (list-no-order "one" "two" "three") (list-no-order "file")))
         )))
 
   ; testing when called with paths that are directories

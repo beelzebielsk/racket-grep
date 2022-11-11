@@ -281,8 +281,6 @@ from the port which match at least one of the patterns |#
        [_ #false])
      (~? message)))
 
-  ; TODO: test main
-  ; TODO: test that patterns are read correctly
   (with-mocks main
     (parameterize ([current-command-line-arguments
                     '#("-e" "one" "-e" "two" "file")])

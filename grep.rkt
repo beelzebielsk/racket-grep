@@ -127,69 +127,6 @@ from the port which match at least one of the patterns |#
            racket/list
            racket/generator))
 
-; learning tests
-(module+ test
-  (check-exn
-   exn?
-   (thunk (open-input-file "unopenable-file.txt")))
-
-  (check-exn
-   exn:fail?
-   (thunk (open-input-file "unopenable-file.txt")))
-
-  (check-exn
-   exn:fail:filesystem?
-   (thunk (open-input-file "unopenable-file.txt")))
-
-  (check-exn
-   exn:fail:filesystem:errno?
-   (thunk (open-input-file "file-doesnt-exist")))
-
-  (check-equal?
-   (with-handlers ([exn:fail:filesystem:errno?
-                    (λ (exn) (car (exn:fail:filesystem:errno-errno exn)))])
-     (open-input-file "file-doesnt-exist")
-     )
-   2
-   )
-
-  (define (mock-call-with-input-file . vals)
-    (define vals-generator (sequence->generator vals))
-    (λ (path proc)
-      (define val (vals-generator))
-      (cond
-        [(string? val) (call-with-input-string val proc)]
-        [(exn? val) (raise val)])))
-
-  (define (mock-exn:fail:filesystem:errno errno)
-    (exn:fail:filesystem:errno "" (current-continuation-marks) errno))
-
-  (with-mocks grep
-    (with-mock-behavior ([cwif-mock
-                          (mock-call-with-input-file
-                           "hi"
-                           (mock-exn:fail:filesystem:errno '(2 . posix))
-                           (mock-exn:fail:filesystem:errno '(13 . posix)))])
-      (grep (list "hic" "hi") (list "path-one.txt"))
-      ))
-
-  ; how to check the arguments of a mock call, and use match on them
-  (with-mocks main
-    (parameterize ([current-command-line-arguments
-                    '#("-f" "patterns" "file")])
-      (with-mock-behavior ([cwif-mock
-                            (mock-call-with-input-file
-                             "one\ntwo\nthree")])
-        (main)
-        (check-mock-called-with? g-mock (arguments '("one" "two" "three") '("file")))
-        (check-true
-         (match (arguments-positional (mock-call-args (last (mock-calls g-mock))))
-           #| [(struct arguments ((list "one" "two" "three") (list "file"))) #true] |#
-           [(list (list-no-order "one" "three" "two") (list-no-order "file")) #true]
-           [_ #false])
-         ))))
-  )
-
 (module+ test
   (define test-strings
     `#hash(
@@ -357,5 +294,68 @@ from the port which match at least one of the patterns |#
     (with-mock-behavior ([de-mock (const #true)])
       (grep (list "") (list "."))
       (check-mock-num-calls pem-mock 1)))
+  )
+
+; learning tests
+(module+ test
+  (check-exn
+   exn?
+   (thunk (open-input-file "unopenable-file.txt")))
+
+  (check-exn
+   exn:fail?
+   (thunk (open-input-file "unopenable-file.txt")))
+
+  (check-exn
+   exn:fail:filesystem?
+   (thunk (open-input-file "unopenable-file.txt")))
+
+  (check-exn
+   exn:fail:filesystem:errno?
+   (thunk (open-input-file "file-doesnt-exist")))
+
+  (check-equal?
+   (with-handlers ([exn:fail:filesystem:errno?
+                    (λ (exn) (car (exn:fail:filesystem:errno-errno exn)))])
+     (open-input-file "file-doesnt-exist")
+     )
+   2
+   )
+
+  (define (mock-call-with-input-file . vals)
+    (define vals-generator (sequence->generator vals))
+    (λ (path proc)
+      (define val (vals-generator))
+      (cond
+        [(string? val) (call-with-input-string val proc)]
+        [(exn? val) (raise val)])))
+
+  (define (mock-exn:fail:filesystem:errno errno)
+    (exn:fail:filesystem:errno "" (current-continuation-marks) errno))
+
+  (with-mocks grep
+    (with-mock-behavior ([cwif-mock
+                          (mock-call-with-input-file
+                           "hi"
+                           (mock-exn:fail:filesystem:errno '(2 . posix))
+                           (mock-exn:fail:filesystem:errno '(13 . posix)))])
+      (grep (list "hic" "hi") (list "path-one.txt"))
+      ))
+
+  ; how to check the arguments of a mock call, and use match on them
+  (with-mocks main
+    (parameterize ([current-command-line-arguments
+                    '#("-f" "patterns" "file")])
+      (with-mock-behavior ([cwif-mock
+                            (mock-call-with-input-file
+                             "one\ntwo\nthree")])
+        (main)
+        (check-mock-called-with? g-mock (arguments '("one" "two" "three") '("file")))
+        (check-true
+         (match (arguments-positional (mock-call-args (last (mock-calls g-mock))))
+           #| [(struct arguments ((list "one" "two" "three") (list "file"))) #true] |#
+           [(list (list-no-order "one" "three" "two") (list-no-order "file")) #true]
+           [_ #false])
+         ))))
   )
 
